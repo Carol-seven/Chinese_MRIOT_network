@@ -8,7 +8,7 @@
 
 * image: the results presented as figures.
 
-## About the MIORTs of China
+## About the MRIOTs of China
 
 We have no right to share the original data used in the paper.
 
