@@ -1,5 +1,8 @@
 # Regional and Sectoral Structures of the Chinese Economy
 
+[![Project Status: Inactive - The project has reached a stable, usable state but is no longer being actively developed; support/maintenance will be provided as time allows.](http://www.repostatus.org/badges/latest/inactive.svg)](http://www.repostatus.org/#inactive)
+[![DOI](https://img.shields.io/badge/DOI-10.1016/j.physa.2021.126196-blue.svg)](https://doi.org/10.1016/j.physa.2021.126196)
+
 ## Directory structure
 
 * code: R script for generating the simulated data and analyzing the data. 
