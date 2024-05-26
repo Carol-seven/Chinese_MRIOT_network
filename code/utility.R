@@ -10,16 +10,17 @@
 ## Weights can be kept or removed.
 ## Direction can be kept or removed.
 
-netbackbone <- function(M, alpha = 0.05, thres.fixed = NA, weighted = TRUE, directed = TRUE){
+netbackbone <- function(M, alpha = 0.05, thres.fixed = NA,
+                        weighted = TRUE, directed = TRUE) {
   ## if using the fixed threshold
   n <- dim(M)[1]
-  if (is.na(thres.fixed) == FALSE){
+  if (is.na(thres.fixed) == FALSE) {
     thres <- thres.fixed
     M[M < thres] <- 0
   }
   
   ## if using filter method
-  if (missing(thres.fixed)|is.na(thres.fixed)){
+  if (missing(thres.fixed)|is.na(thres.fixed)) {
     ## normalized out-weight and in-weight
     w_norm_out <- M/rowSums(M) ## produce NaNs for the nodes with no outgoing edges
     w_norm_in <- t(t(M)/colSums(M)) ## produce NaNs for the nodes with no incoming edges
@@ -46,10 +47,10 @@ netbackbone <- function(M, alpha = 0.05, thres.fixed = NA, weighted = TRUE, dire
     ## threshold corresponding to alpha
     thres <- min(M[M != 0], na.rm = TRUE)
   }
-  if (!weighted){
+  if (!weighted) {
     M[M > 0] <- 1
   }
-  if (!directed){
+  if (!directed) {
     M <- M + t(M)
     M <- M - diag(diag(M), n)/2
     warning("The resulting threshold is before merging the directed edges!")
@@ -57,8 +58,7 @@ netbackbone <- function(M, alpha = 0.05, thres.fixed = NA, weighted = TRUE, dire
   return(list(AdjacencyMatrix = M, Threshold = thres))
 }
 
-##-------------------------------------------------------------------------------------
-
+##----------------------------------------------------------------------------------------
 ##########################################
 #### Degree and strength distribution ####
 ##########################################
@@ -102,10 +102,9 @@ gen_hist <- function(data = mriot_data, yearlist, mode = c("degree", "strength")
   return(result)
 }
 
-##-------------------------------------------------------------------------------------
-
+##----------------------------------------------------------------------------------------
 #######################################
-########## tail distribution ##########
+########## Tail distribution ##########
 #######################################
 
 tail_dist <- function(adj, 
@@ -158,8 +157,7 @@ tail_dist <- function(adj,
   return(output)
 }
 
-##-------------------------------------------------------------------------------------
-
+##----------------------------------------------------------------------------------------
 #######################################
 ########## weighted PageRank ##########
 #######################################
@@ -233,3 +231,4 @@ wpr <- function(adj,
     return(myres)
   }
 }
+

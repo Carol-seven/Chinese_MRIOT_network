@@ -8,9 +8,6 @@ library(ggpubr) ## arrange multiple ggplots
 library(igraph)  ## generate networks (for analysis)
 library(RColorBrewer) ## generate a long color palette
 library(tidyr) ## gather columns in the data frame into key-value pairs
-## install the R package for weighted directed network
-## library(devtools) ## install gitlab packages
-## devtools::install_git(url = "https://gitlab.com/wdnetwork/wdnet.git")
 library(wdnet) ## generate results of weighted directed network
 library(xtable)  ## generate latex tables
 
@@ -91,7 +88,6 @@ source("utility.R")
 if (! dir.exists("../image")) dir.create("../image")
 
 ##----------------------------------------------------------------------------------------
-
 ######################
 #### Chord graphs ####
 ######################
@@ -201,7 +197,6 @@ circos.clear()
 dev.off()
 
 ##----------------------------------------------------------------------------------------
-
 ########################################
 #### Backbone network visualization ####
 ########################################
@@ -242,8 +237,8 @@ gen_bn <- function(alpha) {
     V(mriot_graph2012)[((i - 1)*sec + 1):(i*sec)]$color <- colors()[10*i]
   }
   ## Remove disconnected nodes in the graph
-  mriot2012_clust <- clusters(mriot_graph2012, mode = "weak")
-  mriot2012_cc <- induced.subgraph(mriot_graph2012, 
+  mriot2012_clust <- components(mriot_graph2012, mode = "weak")
+  mriot2012_cc <- induced_subgraph(mriot_graph2012, 
                                    V(mriot_graph2012)[which(mriot2012_clust$membership 
                                                             == which.max(mriot2012_clust$csize))])
   plot(mriot2012_cc, layout = layout_with_graphopt(mriot2012_cc))
@@ -271,7 +266,6 @@ legend("bottom", inset = -0.01,
 dev.off()
 
 ##----------------------------------------------------------------------------------------
-
 ######################################
 #### Degree/Strength distribution ####
 ######################################
@@ -410,7 +404,6 @@ colnames(pl_df) <- c("in_str2007", "out_str2007", "tot_str2007",
 print(xtable(pl_df, digits = c(0, rep(2, 6))))
 
 ##----------------------------------------------------------------------------------------
-
 #######################
 #### Assortativity ####
 #######################
@@ -436,21 +429,16 @@ gen_assort <- function(data = mriot_data, alpha = 1) {
     return(temp$AdjacencyMatrix)})
   
   ## unweighted assortativity
-  assort_total_uw <- apply(data_uwd, 3, wdnet::dw_assort, type = "out-in")
-  assort_outin_uw <- apply(data_uw, 3, wdnet::dw_assort, type = "out-in")
-  assort_inin_uw <- apply(data_uw, 3, wdnet::dw_assort, type = "in-in")
-  assort_outout_uw <- apply(data_uw, 3, wdnet::dw_assort, type = "out-out")
-  assort_inout_uw <- apply(data_uw, 3, wdnet::dw_assort, type = "in-out")
+  assort_total_uw <- apply(data_uwd, 3, function(M) {wdnet::assortcoef(adj = M)$outin})
+  assort_uw <- apply(data_uw, 3, function(M) {wdnet::assortcoef(adj = M)})
   
   ## weighted assortativity
-  assort_total <- apply(data_ud, 3, wdnet::dw_assort, type = "out-in")
-  assort_outin <- apply(data, 3, wdnet::dw_assort, type = "out-in")
-  assort_inin <- apply(data, 3, wdnet::dw_assort, type = "in-in")
-  assort_outout <- apply(data, 3, wdnet::dw_assort, type = "out-out")
-  assort_inout <- apply(data, 3, wdnet::dw_assort, type = "in-out")
+  assort_total <- apply(data_ud, 3, function(M) {wdnet::assortcoef(adj = M)$outin})
+  assort <- apply(data, 3, function(M) {wdnet::assortcoef(adj = M)})
   
-  result <- rbind(assort_inin_uw, assort_inout_uw, assort_outin_uw, assort_outout_uw, assort_total_uw,
-                  assort_inin, assort_inout, assort_outin, assort_outout, assort_total)
+  result <- rbind(assort_total_uw, do.call(cbind, assort_uw),
+                  assort_total, do.call(cbind, assort))
+  rownames(result) <- rep(c("total", "out-out", "out-in", "in-out", "in-in"), 2)
   colnames(result) <- year_list
   return(result)
 }
@@ -465,12 +453,12 @@ gen_assort <- function(data = mriot_data, alpha = 1) {
 
 gen_assortdf <- function(year) {
   y <- which(year_list %in% year == TRUE)
-  myvalue <- rbind(gen_assort(mriot_data)[,y],
+  myvalue <- cbind(gen_assort(mriot_data)[,y],
                    gen_assort(mriot_data_intra)[,y],
                    gen_assort(mriot_data_inter)[,y])
   dim(myvalue) <- c(5, prod(dim(myvalue))/5)
   mydf <- data.frame(myvalue)
-  rownames(mydf) <- c("in-in", "in-out", "out-in", "out-out", "total")
+  rownames(mydf) <- c("total", "out-out", "out-in", "in-out", "in-in")
   return(mydf)
 }
 
@@ -494,13 +482,10 @@ gen_assort_seq <- function(x) {
     return(temp$AdjacencyMatrix)})
   
   ## weighted assortativity
-  assort_total <- apply(data_ud_x, 3, wdnet::dw_assort, type = "out-in")
-  assort_outin <- apply(data_x, 3, wdnet::dw_assort, type = "out-in")
-  assort_inin <- apply(data_x, 3, wdnet::dw_assort, type = "in-in")
-  assort_outout <- apply(data_x, 3, wdnet::dw_assort, type = "out-out")
-  assort_inout <- apply(data_x, 3, wdnet::dw_assort, type = "in-out")
+  assort_total <- apply(data_ud_x, 3, function(M) {wdnet::assortcoef(adj = M)$outin})
+  assort <- apply(data_x, 3, function(M) {wdnet::assortcoef(adj = M)})
   
-  result <- rbind(assort_inin, assort_inout, assort_outin, assort_outout, assort_total)
+  result <- rbind(assort_total, do.call(cbind, assort))
   return(result)
 }
 
@@ -508,11 +493,11 @@ assort_seq <- mapply(gen_assort_seq, seq(0.001, 0.999, 0.001))
 ## Considering the long running time, the data has been saved.
 ## load("assort_seq.RData")
 
-assort_seq <- data.frame(assort_seq)
+assort_seq <- data.frame(apply(assort_seq, 2, as.numeric))
 
 colnames(assort_seq) <- seq(0.001, 0.999, 0.001)
 
-assort_seq <- data.frame(type = rep(c("in-in", "in-out", "out-in", "out-out", "total")), 
+assort_seq <- data.frame(type = rep(c("total", "out-out", "out-in", "in-out", "in-in")), 
                          gather(assort_seq, "alpha", "assort"), 
                          year = rep(year_list, each = 5))
 
@@ -533,83 +518,22 @@ ggplot(assort_seq, aes(x = alpha, y = assort, color = type, group = type)) +
 dev.off()
 
 ##----------------------------------------------------------------------------------------
-
 #########################
 #### Clustering coef ####
 #########################
 
-cc_total <- apply(mriot_data, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$total
+cc <- apply(mriot_data, 3, function(M) {
+  temp <- wdnet::clustcoef(adj = M, method = "Clemente", isolates = "nan")
   return(temp)
 })
 
-cc_total_intra <- apply(mriot_data_intra, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$total
+cc_intra <- apply(mriot_data_intra, 3, function(M) {
+  temp <- wdnet::clustcoef(adj = M, method = "Clemente", isolates = "nan")
   return(temp)
 })
 
-cc_total_inter <- apply(mriot_data_inter, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$total
-  return(temp)
-})
-
-cc_in <- apply(mriot_data, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$"in"
-  return(temp)
-})
-
-cc_in_intra <- apply(mriot_data_intra, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$"in"
-  return(temp)
-})
-
-cc_in_inter <- apply(mriot_data_inter, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$"in"
-  return(temp)
-})
-
-cc_out <- apply(mriot_data, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$out
-  return(temp)
-})
-
-cc_out_intra <- apply(mriot_data_intra, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$out
-  return(temp)
-})
-
-cc_out_inter <- apply(mriot_data_inter, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$out
-  return(temp)
-})
-
-cc_cyc <- apply(mriot_data, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$cycle
-  return(temp)
-})
-
-cc_cyc_intra <- apply(mriot_data_intra, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$cycle
-  return(temp)
-})
-
-cc_cyc_inter <- apply(mriot_data_inter, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$cycle
-  return(temp)
-})
-
-cc_mid <- apply(mriot_data, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$middle
-  return(temp)
-})
-
-cc_mid_intra <- apply(mriot_data_intra, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$middle
-  return(temp)
-})
-
-cc_mid_inter <- apply(mriot_data_inter, 3, function(M) {
-  temp <- wdnet::dw_clustcoeff(M, method = "Clemente", isolates = "nan")$middle
+cc_inter <- apply(mriot_data_inter, 3, function(M) {
+  temp <- wdnet::clustcoef(adj = M, method = "Clemente", isolates = "nan")
   return(temp)
 })
 
@@ -618,21 +542,21 @@ cc_mid_inter <- apply(mriot_data_inter, 3, function(M) {
 
 gen_globalcc <- function(year) {
   myind <- which(year_list %in% year == TRUE)
-  mydf <- cbind(sapply(myind, function(x){return(cc_total[[x]]$globalcc)}), 
-                sapply(myind, function(x){return(cc_total_intra[[x]]$globalcc)}), 
-                sapply(myind, function(x){return(cc_total_inter[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_cyc[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_cyc_intra[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_cyc_inter[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_mid[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_mid_intra[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_mid_inter[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_in[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_in_intra[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_in_inter[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_out[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_out_intra[[x]]$globalcc)}),
-                sapply(myind, function(x){return(cc_out_inter[[x]]$globalcc)}))
+  mydf <- cbind(sapply(myind, function(x){return(cc[[x]]$"total"$globalcc)}), 
+                sapply(myind, function(x){return(cc_intra[[x]]$"total"$globalcc)}), 
+                sapply(myind, function(x){return(cc_inter[[x]]$"total"$globalcc)}),
+                sapply(myind, function(x){return(cc[[x]]$"cycle"$globalcc)}),
+                sapply(myind, function(x){return(cc_intra[[x]]$"cycle"$globalcc)}),
+                sapply(myind, function(x){return(cc_inter[[x]]$"cycle"$globalcc)}),
+                sapply(myind, function(x){return(cc[[x]]$"middle"$globalcc)}),
+                sapply(myind, function(x){return(cc_intra[[x]]$"middle"$globalcc)}),
+                sapply(myind, function(x){return(cc_inter[[x]]$"middle"$globalcc)}),
+                sapply(myind, function(x){return(cc[[x]]$"in"$globalcc)}),
+                sapply(myind, function(x){return(cc_intra[[x]]$"in"$globalcc)}),
+                sapply(myind, function(x){return(cc_inter[[x]]$"in"$globalcc)}),
+                sapply(myind, function(x){return(cc[[x]]$"out"$globalcc)}),
+                sapply(myind, function(x){return(cc_intra[[x]]$"out"$globalcc)}),
+                sapply(myind, function(x){return(cc_inter[[x]]$"out"$globalcc)}))
   return(t(mydf))
 }
 
@@ -654,20 +578,20 @@ print(xtable(globalcc_df, digits = c(0, rep(3, 6))))
 gen_localcc <- function(year, top.set = 5, bottom.set = 5) {
   myind <- which(year_list %in% year == TRUE)
   local_tot <- rbind(
-    sapply(myind, function(x){return(order(cc_total[[x]]$localcc, decreasing = TRUE)[1:top.set])}), 
-    sapply(myind, function(x){return(order(cc_total[[x]]$localcc)[1:bottom.set])}))
+    sapply(myind, function(x){return(order(cc[[x]]$"total"$localcc, decreasing = TRUE)[1:top.set])}), 
+    sapply(myind, function(x){return(order(cc[[x]]$"total"$localcc)[1:bottom.set])}))
   local_cyc <- rbind(
-    sapply(myind, function(x){return(order(cc_cyc[[x]]$localcc, decreasing = TRUE)[1:top.set])}), 
-    sapply(myind, function(x){return(order(cc_cyc[[x]]$localcc)[1:bottom.set])}))
+    sapply(myind, function(x){return(order(cc[[x]]$"cycle"$localcc, decreasing = TRUE)[1:top.set])}), 
+    sapply(myind, function(x){return(order(cc[[x]]$"cycle"$localcc)[1:bottom.set])}))
   local_mid <- rbind(
-    sapply(myind, function(x){return(order(cc_mid[[x]]$localcc, decreasing = TRUE)[1:top.set])}), 
-    sapply(myind, function(x){return(order(cc_mid[[x]]$localcc)[1:bottom.set])}))
+    sapply(myind, function(x){return(order(cc[[x]]$"middle"$localcc, decreasing = TRUE)[1:top.set])}), 
+    sapply(myind, function(x){return(order(cc[[x]]$"middle"$localcc)[1:bottom.set])}))
   local_in <- rbind(
-    sapply(myind, function(x){return(order(cc_in[[x]]$localcc, decreasing = TRUE)[1:top.set])}), 
-    sapply(myind, function(x){return(order(cc_in[[x]]$localcc)[1:bottom.set])}))
+    sapply(myind, function(x){return(order(cc[[x]]$"in"$localcc, decreasing = TRUE)[1:top.set])}), 
+    sapply(myind, function(x){return(order(cc[[x]]$"in"$localcc)[1:bottom.set])}))
   local_out <- rbind(
-    sapply(myind, function(x){return(order(cc_out[[x]]$localcc, decreasing = TRUE)[1:top.set])}), 
-    sapply(myind, function(x){return(order(cc_out[[x]]$localcc)[1:bottom.set])}))
+    sapply(myind, function(x){return(order(cc[[x]]$"out"$localcc, decreasing = TRUE)[1:top.set])}), 
+    sapply(myind, function(x){return(order(cc[[x]]$"out"$localcc)[1:bottom.set])}))
   mydf <- cbind(local_tot, local_cyc, local_mid, local_in, local_out)
   return(mydf)
 }
@@ -687,7 +611,6 @@ localccname_df_topresent <- as.data.frame(
 print(xtable(localccname_df_topresent), include.rownames = FALSE)
 
 ##----------------------------------------------------------------------------------------
-
 #############################
 #### Community detection ####
 #############################
@@ -722,7 +645,7 @@ myPalette <- getPalette(colorCount)
 pdf(file.path("../image", "cluster.pdf"), width = 13)
 
 ggplot(code_df, aes(x = sector, y = province, fill = Z)) + 
-  geom_tile(colour = "white", size = 0.5) + 
+  geom_tile(colour = "white", linewidth = 0.5) + 
   facet_grid(.~year) + 
   scale_fill_manual(values = myPalette) + 
   theme(strip.background = element_rect(fill = "gray90", color = "black"), 
@@ -732,7 +655,6 @@ ggplot(code_df, aes(x = sector, y = province, fill = Z)) +
 dev.off()
 
 ##----------------------------------------------------------------------------------------
-
 #############################
 #### Centrality analysis ####
 #############################
@@ -815,3 +737,4 @@ for (i in 1:dim(pr_tva)[2]) {
 }
 
 xtable(cbind(pr_tva, pr0.001, pr0.0001))
+
